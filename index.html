@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mistrz Interpunkcji</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Roboto+Mono:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Lato', sans-serif;
+            background-color: #f8fafc;
+        }
+        h1, #rule-explanation {
+            font-family: 'Roboto Mono', monospace;
+        }
+        .comma-slot {
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            width: 28px;
+            height: 28px;
+            border: 1px solid #cbd5e1;
+        }
+        .comma-slot:not(.disabled):hover {
+            background-color: #e0f2fe; /* Jasnoniebieski przy najechaniu */
+        }
+        .comma-slot.selected {
+            color: #3b82f6;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .comma-slot.correct {
+            background-color: #dcfce7; /* Zielony */
+            border-color: #4ade80;
+            color: #166534;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .comma-slot.incorrect {
+            animation: shake 0.4s;
+            background-color: #fee2e2; /* Czerwony */
+            border-color: #f87171;
+            color: #b91c1c;
+        }
+        .comma-slot.missed {
+            background-color: #ffedd5; /* Pomarańczowy dla pominiętych */
+            border-color: #fb923c;
+        }
+        .comma-slot.disabled {
+            cursor: not-allowed;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-4px); }
+            75% { transform: translateX(4px); }
+        }
+        #sentence-container {
+            line-height: 2.8; /* Zwiększa odstępy między liniami dla lepszej czytelności */
+            font-family: 'Lato', sans-serif; /* Zapewnia standardową czcionkę dla tekstu */
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-4xl mx-auto bg-white p-6 sm:p-8 rounded-xl shadow-lg">
+        <div class="text-center mb-4">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800">Mistrz Interpunkcji</h1>
+            <p class="text-gray-600 mt-2">Wstaw przecinki w odpowiednich miejscach, a następnie kliknij "Sprawdź".</p>
+        </div>
+
+        <div id="game-area" class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+            <p id="sentence-container" class="text-xl md:text-2xl text-gray-700 mb-2">
+                <!-- Zdanie zostanie wygenerowane tutaj -->
+            </p>
+            <p id="source-container" class="text-right text-sm text-gray-500 italic pr-2"></p>
+            <div id="feedback-area" class="h-16 mt-4 text-center flex items-center justify-center">
+                <p id="rule-explanation" class="text-lg font-semibold"></p>
+            </div>
+        </div>
+
+        <div id="buttons-container" class="text-center mt-6">
+            <button id="check-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-transform transform hover:scale-105">
+                Sprawdź
+            </button>
+            <button id="next-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-transform transform hover:scale-105 hidden">
+                Następne zdanie
+            </button>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const sentences = [
+            {
+                parts: ["Pomyślał", "że to wszystko jest nieważne", "i że liczy się tylko przyszłość."],
+                source: "Lalka",
+                correctCommas: [0],
+                incorrectRules: {
+                    1: "BŁĄD: Nie stawiamy przecinka przed 'i' łączącym dwa zdania podrzędne tego samego typu."
+                },
+                finalRule: "Oddzielamy zdanie podrzędne, ale nie rozdzielamy spójnikiem 'i' zdań współrzędnych."
+            },
+            {
+                parts: ["Izabela", "była piękną kobietą."],
+                source: "Lalka",
+                correctCommas: [],
+                incorrectRules: {
+                    0: "BŁĄD: Nigdy nie oddzielamy podmiotu ('Izabela') od orzeczenia ('była')."
+                },
+                finalRule: "W prostym zdaniu podmiot i orzeczenie tworzą nierozerwalną całość."
+            },
+            {
+                parts: ["Nie mógł spać", "dlatego że ciągle o niej myślał."],
+                source: "Lalka",
+                correctCommas: [0],
+                incorrectRules: {
+                    1: "BŁĄD: Przecinek stawiamy przed całym spójnikiem złożonym ('dlatego że'), a nie w jego środku."
+                },
+                finalRule: "Przecinek stawiamy przed całymi spójnikami złożonymi, takimi jak 'dlatego że', 'mimo że', 'podczas gdy'."
+            },
+            {
+                parts: ["Był bledszy", "niż zwykle."],
+                source: "Lalka",
+                correctCommas: [],
+                incorrectRules: {
+                    0: "BŁĄD: Nie stawiamy przecinka przed spójnikami porównawczymi, takimi jak 'niż', 'jak', 'jako'."
+                },
+                finalRule: "Przed spójnikami wprowadzającymi porównanie (np. niż, jak) nie stawiamy przecinka."
+            },
+            {
+                parts: ["Cóż tam", "panie", "w polityce?"],
+                source: "Wesele",
+                correctCommas: [0, 1],
+                incorrectRules: {},
+                finalRule: "Wołacz ('panie') w środku zdania wydzielamy przecinkami."
+            }
+        ];
+
+        const sentenceContainer = document.getElementById('sentence-container');
+        const sourceContainer = document.getElementById('source-container');
+        const ruleExplanation = document.getElementById('rule-explanation');
+        const nextButton = document.getElementById('next-btn');
+        const checkButton = document.getElementById('check-btn');
+
+        let currentSentenceIndex = 0;
+
+        function loadSentence(index) {
+            const data = sentences[index];
+            sentenceContainer.innerHTML = '';
+            sourceContainer.textContent = '';
+            ruleExplanation.textContent = '';
+            checkButton.classList.remove('hidden');
+            nextButton.classList.add('hidden');
+
+            let slotIndex = 0;
+            data.parts.forEach((part, i) => {
+                const wordSpan = document.createElement('span');
+                wordSpan.textContent = part + ' ';
+                sentenceContainer.appendChild(wordSpan);
+
+                if (i < data.parts.length - 1) {
+                    const slotSpan = document.createElement('span');
+                    slotSpan.className = 'comma-slot inline-flex items-center justify-center bg-gray-200 text-gray-500 rounded-md';
+                    slotSpan.dataset.index = slotIndex;
+                    slotSpan.addEventListener('click', toggleComma);
+                    sentenceContainer.appendChild(slotSpan);
+                    sentenceContainer.appendChild(document.createTextNode(' '));
+                    slotIndex++;
+                }
+            });
+            
+            sourceContainer.textContent = `— ${data.source}`;
+        }
+
+        function toggleComma(event) {
+            const slot = event.target;
+            if (slot.classList.contains('disabled')) return;
+
+            if (slot.classList.contains('selected')) {
+                slot.classList.remove('selected');
+                slot.textContent = '';
+            } else {
+                slot.classList.add('selected');
+                slot.textContent = ',';
+            }
+        }
+
+        function checkAnswers() {
+            const data = sentences[currentSentenceIndex];
+            const slots = sentenceContainer.querySelectorAll('.comma-slot');
+            let allCorrect = true;
+
+            slots.forEach(slot => {
+                const index = parseInt(slot.dataset.index);
+                const isCorrectPosition = data.correctCommas.includes(index);
+                const isSelected = slot.classList.contains('selected');
+
+                slot.classList.add('disabled'); // Zablokuj dalsze klikanie
+
+                if (isSelected && isCorrectPosition) {
+                    slot.classList.add('correct');
+                } else if (isSelected && !isCorrectPosition) {
+                    slot.classList.add('incorrect');
+                    allCorrect = false;
+                } else if (!isSelected && isCorrectPosition) {
+                    slot.classList.add('missed');
+                    allCorrect = false;
+                }
+            });
+
+            ruleExplanation.textContent = data.finalRule;
+            ruleExplanation.className = 'text-lg font-semibold text-blue-600';
+            
+            checkButton.classList.add('hidden');
+            nextButton.classList.remove('hidden');
+        }
+
+        function loadNextSentence() {
+            currentSentenceIndex = (currentSentenceIndex + 1) % sentences.length;
+            loadSentence(currentSentenceIndex);
+        }
+
+        checkButton.addEventListener('click', checkAnswers);
+        nextButton.addEventListener('click', loadNextSentence);
+        loadSentence(currentSentenceIndex);
+    });
+    </script>
+</body>
+</html>
